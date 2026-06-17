@@ -6,6 +6,7 @@ import OrderPage from "./pages/Order";
 import InventoryPage from "./pages/Inventory";
 import { clearLogin, getSaveToken, getSaveUser } from "./service/authService";
 import PointsPage from "./pages/PointsPage";
+import AdminConfigPage from "./pages/AdminConfigPage";
 
 const ShipmentIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -37,6 +38,7 @@ const PRIVATE_ROUTER = [
   { key: "order",     label: "Órdenes",    hash: "#/order",     icon: <OrderIcon />     },
   { key: "inventory", label: "Inventario", hash: "#/inventory", icon: <InventoryIcon /> },
   { key: "points",    label: "Puntos",     hash: "#/points",    icon: "🎁" },
+  { key: "config",    label: "Configuración",  hash: "#/config",    icon: "⚙️" },
 ];
 
 function getRouteFromHash() {
@@ -82,6 +84,8 @@ function App() {
         return <OrderPage />;
       }
 
+      if (current === "shipment") return <ShipmentsPage />;
+
       return (
         <p className="loading">
           No tienes permisos para acceder a esta sección
@@ -93,6 +97,7 @@ function App() {
     if (current === "order") return <OrderPage />;
     if (current === "inventory") return <InventoryPage />;
     if (current === "points") return <PointsPage />;
+    if (current === "config") return <AdminConfigPage />;
 
     return <p className="loading">Ruta no encontrada</p>;
   }
@@ -106,7 +111,7 @@ function App() {
   const allowedRoutes =
     user?.role === "ROLE_ADMIN"
       ? PRIVATE_ROUTER
-      : PRIVATE_ROUTER.filter(route => route.key === "order");
+      : PRIVATE_ROUTER.filter(route => route.key === "order" || route.key === "shipment");
 
   return (
     <div className="app-layout">

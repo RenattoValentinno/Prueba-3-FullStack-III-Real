@@ -154,43 +154,54 @@ function OrderPage() {
             ))}
           </div>
 
-          {/* --- BLOQUE DE DESCUENTO EN TIEMPO REAL --- */}
-          <div style={{ marginTop: '15px', padding: '15px', background: '#e2e8f0', border: '2px solid #94a3b8', borderRadius: '8px', color: '#0f172a' }}>
-            {(() => {
-              const totalOriginal = form.lines.reduce((acc, l) => acc + (Number(l.unitPrice) * Number(l.quantity)), 0);
-              const totalQty = form.lines.reduce((acc, l) => acc + Number(l.quantity), 0);
-              const cantidadPaso = 15;
-              const porcentaje = 0.05;
-              const bloques = Math.floor(totalQty / cantidadPaso);
-              const descuento = totalOriginal * (bloques * porcentaje);
-              const totalFinal = totalOriginal - descuento;
-              // CÁLCULO DE PUNTOS: Usamos totalFinal (que ya existe y está bien definida)
-              const puntosGanados = Math.floor(totalFinal / 100);
+          {/* --- BLOQUE DE DESCUENTO Y PUNTOS EN TIEMPO REAL --- */}
+            <div style={{ marginTop: '15px', padding: '15px', background: '#e2e8f0', border: '2px solid #94a3b8', borderRadius: '8px', color: '#0f172a' }}>
+              {(() => {
+                // 1. LEER LA CONFIGURACIÓN DEL ADMIN (O usar los de fábrica por si acaso)
+                const savedConfig = JSON.parse(localStorage.getItem("app_business_config")) || {
+                  pesosPorPunto: 100,
+                  cantidadMinDescuento: 15,
+                  porcentajeDescuento: 5
+                };
 
-              return (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Total Original:</span>
-                    <span>${totalOriginal.toFixed(2)}</span>
-                  </div>
-                  {descuento > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'green' }}>
-                      <span>Descuento ({bloques * (porcentaje * 100)}%):</span>
-                      <span>-${descuento.toFixed(2)}</span>
+                const totalOriginal = form.lines.reduce((acc, l) => acc + (Number(l.unitPrice) * Number(l.quantity)), 0);
+                const totalQty = form.lines.reduce((acc, l) => acc + Number(l.quantity), 0);
+
+                // 2. REEMPLAZAR VALORES FIJOS POR LAS VARIABLES DEL ADMIN
+                const cantidadPaso = savedConfig.cantidadMinDescuento;
+                const porcentaje = savedConfig.porcentajeDescuento / 100; // Convertir de entero (5) a decimal (0.05)
+
+                const bloques = Math.floor(totalQty / cantidadPaso);
+                const descuento = totalOriginal * (bloques * porcentaje);
+                const totalFinal = totalOriginal - descuento;
+
+                // 3. CÁLCULO DE PUNTOS DINÁMICO
+                const puntosGanados = Math.floor(totalFinal / savedConfig.pesosPorPunto);
+
+                return (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Total Original:</span>
+                      <span>${totalOriginal.toFixed(2)}</span>
                     </div>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', borderTop: '1px solid #ccc', marginTop: '5px' }}>
-                    <span>Total a pagar:</span>
-                    <span>${totalFinal.toFixed(2)}</span>
-                  </div>
-                  {/* AQUÍ MOSTRAMOS LOS PUNTOS */}
-                  <div style={{ marginTop: '10px', color: '#475569', textAlign: 'center', fontSize: '0.9rem' }}>
-                    <strong>🎁 Puntos por esta compra: {puntosGanados}</strong>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
+                    {descuento > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'green' }}>
+                        <span>Descuento ({bloques * (porcentaje * 100)}%):</span>
+                        <span>-${descuento.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', borderTop: '1px solid #ccc', marginTop: '5px' }}>
+                      <span>Total a pagar:</span>
+                      <span>${totalFinal.toFixed(2)}</span>
+                    </div>
+
+                    <div style={{ marginTop: '10px', color: '#475569', textAlign: 'center', fontSize: '0.9rem' }}>
+                      <strong>🎁 Puntos por esta compra: {puntosGanados}</strong>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
 
           <button type="submit" className="btn-primary" disabled={formLoading}>
             {formLoading ? "Creando..." : "Crear Orden"}
