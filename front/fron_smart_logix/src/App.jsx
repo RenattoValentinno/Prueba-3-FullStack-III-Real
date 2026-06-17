@@ -5,6 +5,7 @@ import ShipmentsPage from "./pages/Shipments";
 import OrderPage from "./pages/Order";
 import InventoryPage from "./pages/Inventory";
 import { clearLogin, getSaveToken, getSaveUser } from "./service/authService";
+import PointsPage from "./pages/PointsPage";
 
 const ShipmentIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -35,6 +36,7 @@ const PRIVATE_ROUTER = [
   { key: "shipment",  label: "Envíos",     hash: "#/shipment",  icon: <ShipmentIcon />  },
   { key: "order",     label: "Órdenes",    hash: "#/order",     icon: <OrderIcon />     },
   { key: "inventory", label: "Inventario", hash: "#/inventory", icon: <InventoryIcon /> },
+  { key: "points",    label: "Puntos",     hash: "#/points",    icon: "🎁" },
 ];
 
 function getRouteFromHash() {
@@ -90,6 +92,7 @@ function App() {
     if (current === "shipment") return <ShipmentsPage />;
     if (current === "order") return <OrderPage />;
     if (current === "inventory") return <InventoryPage />;
+    if (current === "points") return <PointsPage />;
 
     return <p className="loading">Ruta no encontrada</p>;
   }

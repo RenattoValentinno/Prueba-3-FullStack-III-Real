@@ -12,6 +12,8 @@ public record OrderResponse(
         String trackingCode,
         String reason,
         OffsetDateTime createdAt,
-        List<OrderLineResponse> lines
+        List<OrderLineResponse> lines,
+        double discountApplied, // Agrega esto
+        int pointsEarned        // Agrega esto
 ) {
 }

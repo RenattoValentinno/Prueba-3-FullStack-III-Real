@@ -2,11 +2,9 @@ import { useEffect, useState } from "react";
 import { getOrders, createOrder, getOrderByNumber } from "../service/orderService";
 import { getSaveUser } from "../service/authService";
 
-
 const STATUS_LABEL = {
   PENDING: "Pendiente", PROCESSING: "Procesando",
   SHIPPED: "Enviado", COMPLETED: "Completado", CANCELLED: "Cancelado",
-
 };
 
 function OrderPage() {
@@ -156,6 +154,38 @@ function OrderPage() {
             ))}
           </div>
 
+          {/* --- BLOQUE DE DESCUENTO EN TIEMPO REAL --- */}
+          <div style={{ marginTop: '15px', padding: '15px', background: '#e2e8f0', border: '2px solid #94a3b8', borderRadius: '8px', color: '#0f172a' }}>
+            {(() => {
+              const totalOriginal = form.lines.reduce((acc, l) => acc + (Number(l.unitPrice) * Number(l.quantity)), 0);
+              const totalQty = form.lines.reduce((acc, l) => acc + Number(l.quantity), 0);
+              const cantidadPaso = 15;
+              const porcentaje = 0.05;
+              const bloques = Math.floor(totalQty / cantidadPaso);
+              const descuento = totalOriginal * (bloques * porcentaje);
+              const totalFinal = totalOriginal - descuento;
+
+              return (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Total Original:</span>
+                    <span>${totalOriginal.toFixed(2)}</span>
+                  </div>
+                  {descuento > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'green' }}>
+                      <span>Descuento ({bloques * (porcentaje * 100)}%):</span>
+                      <span>-${descuento.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', borderTop: '1px solid #ccc', marginTop: '5px' }}>
+                    <span>Total a pagar:</span>
+                    <span>${totalFinal.toFixed(2)}</span>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
           <button type="submit" className="btn-primary" disabled={formLoading}>
             {formLoading ? "Creando..." : "Crear Orden"}
           </button>
@@ -193,4 +223,5 @@ function OrderPage() {
   );
 }
 
+// ESTA EXPORTACIÓN ES LA QUE RESUELVE TU ERROR DE APP.JSX
 export default OrderPage;

@@ -21,6 +21,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 @Service
 @Transactional
 public class OrderService {
@@ -28,15 +29,18 @@ public class OrderService {
     private final PurchaseOrderRepository repository;
     private final InventoryClient inventoryClient;
     private final ShipmentClient shipmentClient;
+    private final CustomerPointsRepository pointsRepo;
 
     public OrderService(
             PurchaseOrderRepository repository,
             InventoryClient inventoryClient,
-            ShipmentClient shipmentClient
+            ShipmentClient shipmentClient,
+            CustomerPointsRepository pointsRepo
     ) {
         this.repository = repository;
         this.inventoryClient = inventoryClient;
         this.shipmentClient = shipmentClient;
+        this.pointsRepo = pointsRepo;
     }
 
     public OrderResponse createOrder(CreateOrderRequest request) {
@@ -83,6 +87,19 @@ public class OrderService {
         order.setStatus(OrderStatus.SHIPMENT_REQUESTED);
         order.setTrackingCode(shipmentResponse.trackingCode());
         repository.save(order);
+
+        // --- INSERTA ESTO AQUÍ ---
+        // 1. Calcular puntos (ejemplo: 1 punto por cada 1000 pesos de la orden)
+        int puntosGanados = order.getTotalAmount().divide(new BigDecimal("1000")).intValue();
+
+        // 2. Buscar o crear el registro del cliente
+        CustomerPoints cp = pointsRepo.findById(order.getCustomerEmail())
+                .orElse(new CustomerPoints(order.getCustomerEmail(), 0));
+
+        // 3. Sumar y guardar
+        cp.setPoints(cp.getPoints() + puntosGanados);
+        pointsRepo.save(cp);
+        // --------------------------
 
         return toResponse(order);
     }
@@ -160,4 +177,40 @@ public class OrderService {
                 lines
         );
     }
+
+    public Order crearPedido(OrderRequest request) {
+        // 1. Reservar Stock
+        boolean reservado = inventoryClient.reserveStock(request.getLines());
+        if (!reservado) {
+            throw new RuntimeException("Stock insuficiente, pedido cancelado.");
+        }
+
+        try {
+            // 2. Intentar envío
+            ShipmentResponse envio = shipmentClient.createShipment(request.getAddress());
+
+            // 3. Guardar orden
+            return orderRepository.save(request.toOrder(envio.getTrackingCode()));
+
+        } catch (Exception e) {
+            // ERROR: El envío falló. REVERSIÓN (Rollback) manual:
+            inventoryClient.releaseStock(request.getLines());
+            throw new RuntimeException("Error en servicio de envíos. Stock liberado.");
+        }
+    }
+
+    private double calcularTotalConDescuento(List<OrderLine> lines, double totalOriginal) {
+        AdminConfig config = adminConfigRepo.findById("CONFIG").orElse(new AdminConfig());
+        int totalProductos = lines.stream().mapToInt(OrderLine::getQuantity).sum();
+
+        // Cálculo: ¿Cuántos bloques de 'cantidadPaso' hay?
+        int bloques = totalProductos / config.getCantidadPaso();
+        double descuentoFinal = bloques * config.getPorcentajeDescuento();
+
+        // Aplicar descuento
+        return totalOriginal * (1 - descuentoFinal);
+    }
+
+
+
 }
