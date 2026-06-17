@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/points")
-@CrossOrigin("*")
 public class CustomerPointsController {
 
     private final CustomerPointsRepository repo;

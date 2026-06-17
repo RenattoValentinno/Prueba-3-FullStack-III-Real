@@ -164,6 +164,8 @@ function OrderPage() {
               const bloques = Math.floor(totalQty / cantidadPaso);
               const descuento = totalOriginal * (bloques * porcentaje);
               const totalFinal = totalOriginal - descuento;
+              // CÁLCULO DE PUNTOS: Usamos totalFinal (que ya existe y está bien definida)
+              const puntosGanados = Math.floor(totalFinal / 100);
 
               return (
                 <>
@@ -180,6 +182,10 @@ function OrderPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', borderTop: '1px solid #ccc', marginTop: '5px' }}>
                     <span>Total a pagar:</span>
                     <span>${totalFinal.toFixed(2)}</span>
+                  </div>
+                  {/* AQUÍ MOSTRAMOS LOS PUNTOS */}
+                  <div style={{ marginTop: '10px', color: '#475569', textAlign: 'center', fontSize: '0.9rem' }}>
+                    <strong>🎁 Puntos por esta compra: {puntosGanados}</strong>
                   </div>
                 </>
               );
