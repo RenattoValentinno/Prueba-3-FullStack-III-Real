@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.smartlogix.order.dto.CustomerPointsDTO;
 
 @Service
 @Transactional
@@ -30,17 +30,20 @@ public class OrderService {
     private final InventoryClient inventoryClient;
     private final ShipmentClient shipmentClient;
     private final CustomerPointsRepository pointsRepo;
+    private final PointsFileService pointsFileService;
 
     public OrderService(
             PurchaseOrderRepository repository,
             InventoryClient inventoryClient,
             ShipmentClient shipmentClient,
-            CustomerPointsRepository pointsRepo
+            CustomerPointsRepository pointsRepo,
+            PointsFileService pointsFileService
     ) {
         this.repository = repository;
         this.inventoryClient = inventoryClient;
         this.shipmentClient = shipmentClient;
         this.pointsRepo = pointsRepo;
+        this.pointsFileService = pointsFileService;
     }
 
     public OrderResponse createOrder(CreateOrderRequest request) {
@@ -89,8 +92,44 @@ public class OrderService {
         repository.save(order);
 
         // --- INSERTA ESTO AQUÍ ---
-        // 1. Calcular puntos (ejemplo: 1 punto por cada 1000 pesos de la orden)
-        int puntosGanados = order.getTotalAmount().divide(new BigDecimal("1000")).intValue();
+        // 1. Calcular puntos ganados
+        int puntosGanados =
+                order.getTotalAmount()
+                        .divide(new BigDecimal("1000"))
+                        .intValue();
+
+        // 2. Leer usuarios desde el JSON
+                List<CustomerPointsDTO> usuarios =
+                        pointsFileService.getAll();
+
+        // 3. Buscar usuario por email
+                CustomerPointsDTO cliente =
+                        usuarios.stream()
+                                .filter(x ->
+                                        x.getCustomerEmail()
+                                                .equals(order.getCustomerEmail()))
+                                .findFirst()
+                                .orElse(null);
+
+        // 4. Si no existe, crearlo
+                if (cliente == null) {
+
+                    cliente = new CustomerPointsDTO(
+                            order.getCustomerName(),
+                            order.getCustomerEmail(),
+                            0
+                    );
+
+                    usuarios.add(cliente);
+                }
+
+        // 5. Sumar puntos
+                cliente.setPoints(
+                        cliente.getPoints() + puntosGanados
+                );
+
+        // 6. Guardar JSON actualizado
+                pointsFileService.saveAll(usuarios);
 
         // 2. Buscar o crear el registro del cliente
         CustomerPoints cp = pointsRepo.findById(order.getCustomerEmail())

@@ -1,0 +1,17 @@
+[
+  {
+    "username": "admin",
+    "customerEmail": "admin@smartlogix.cl",
+    "points": 0
+  },
+  {
+    "username": "usuario",
+    "customerEmail": "usuario@smartlogix.cl",
+    "points": 0
+  },
+  {
+    "username": "bodeguero",
+    "customerEmail": "bodeguero@smartlogix.cl",
+    "points": 0
+  }
+]
