@@ -1,6 +1,12 @@
-import org.springframework.web.bind.annotation.CrossOrigin;
+package com.smartlogix.order.controller;
 
-@CrossOrigin(origins = "*")
+// ¡Asegúrate de tener estos imports!
+import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import java.util.List;
+import com.smartlogix.order.service.PointsFileService;
+import com.smartlogix.order.dto.CustomerPointsDTO;
+
 @RestController
 @RequestMapping("/api/points")
 public class CustomerPointsController {

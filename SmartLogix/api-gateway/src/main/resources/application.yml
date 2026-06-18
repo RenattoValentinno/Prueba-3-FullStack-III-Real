@@ -18,7 +18,10 @@ spring:
         - id: order-service
           uri: lb://order-service
           predicates:
-            - Path=/api/orders/**
+            - Path=/api/orders/**,/api/points/**
+          filters:
+            # Si entra como /api/points, lo transforma internamente a /api/orders/points antes de mandarlo al microservicio
+            - RewritePath=/api/points/(?<segment>.*), /api/orders/points/$\\{segment}
         - id: shipment-service
           uri: lb://shipment-service
           predicates:

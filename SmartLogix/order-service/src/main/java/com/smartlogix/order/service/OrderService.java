@@ -13,14 +13,17 @@ import com.smartlogix.order.dto.CreateOrderRequest;
 import com.smartlogix.order.dto.OrderLineRequest;
 import com.smartlogix.order.dto.OrderLineResponse;
 import com.smartlogix.order.dto.OrderResponse;
+import com.smartlogix.order.dto.CustomerPointsDTO;
 import com.smartlogix.order.exception.OrderNotFoundException;
 import com.smartlogix.order.repository.PurchaseOrderRepository;
+import com.smartlogix.order.repository.CustomerPointsRepository;
+import com.smartlogix.order.model.CustomerPoints;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.smartlogix.order.dto.CustomerPointsDTO;
 
 @Service
 @Transactional
@@ -91,54 +94,39 @@ public class OrderService {
         order.setTrackingCode(shipmentResponse.trackingCode());
         repository.save(order);
 
-        // --- INSERTA ESTO AQUÍ ---
         // 1. Calcular puntos ganados
-        int puntosGanados =
-                order.getTotalAmount()
-                        .divide(new BigDecimal("1000"))
-                        .intValue();
+        int puntosGanados = order.getTotalAmount().divide(new BigDecimal("1000")).intValue();
 
         // 2. Leer usuarios desde el JSON
-                List<CustomerPointsDTO> usuarios =
-                        pointsFileService.getAll();
+        List<CustomerPointsDTO> usuarios = pointsFileService.getAll();
 
         // 3. Buscar usuario por email
-                CustomerPointsDTO cliente =
-                        usuarios.stream()
-                                .filter(x ->
-                                        x.getCustomerEmail()
-                                                .equals(order.getCustomerEmail()))
-                                .findFirst()
-                                .orElse(null);
+        CustomerPointsDTO cliente = usuarios.stream()
+                .filter(x -> x.getCustomerEmail().equals(order.getCustomerEmail()))
+                .findFirst()
+                .orElse(null);
 
-        // 4. Si no existe, crearlo
-                if (cliente == null) {
+        // 4. Si no existe, crearlo en la lista JSON
+        if (cliente == null) {
+            cliente = new CustomerPointsDTO(
+                    order.getCustomerName(),
+                    order.getCustomerEmail(),
+                    0
+            );
+            usuarios.add(cliente);
+        }
 
-                    cliente = new CustomerPointsDTO(
-                            order.getCustomerName(),
-                            order.getCustomerEmail(),
-                            0
-                    );
+        // 5. Sumar puntos y guardar JSON actualizado
+        cliente.setPoints(cliente.getPoints() + puntosGanados);
+        pointsFileService.saveAll(usuarios);
 
-                    usuarios.add(cliente);
-                }
-
-        // 5. Sumar puntos
-                cliente.setPoints(
-                        cliente.getPoints() + puntosGanados
-                );
-
-        // 6. Guardar JSON actualizado
-                pointsFileService.saveAll(usuarios);
-
-        // 2. Buscar o crear el registro del cliente
+        // 6. Buscar o crear el registro del cliente en la Base de Datos
         CustomerPoints cp = pointsRepo.findById(order.getCustomerEmail())
                 .orElse(new CustomerPoints(order.getCustomerEmail(), 0));
 
-        // 3. Sumar y guardar
+        // 7. Sumar y guardar en BD
         cp.setPoints(cp.getPoints() + puntosGanados);
         pointsRepo.save(cp);
-        // --------------------------
 
         return toResponse(order);
     }
@@ -213,43 +201,9 @@ public class OrderService {
                 order.getTrackingCode(),
                 order.getRejectionReason(),
                 order.getCreatedAt(),
-                lines
+                lines,
+                0.0, // <-- Ajustado para que cumpla con los 9 argumentos requeridos
+                0    // <-- Ajustado para que cumpla con los 9 argumentos requeridos
         );
     }
-
-    public Order crearPedido(OrderRequest request) {
-        // 1. Reservar Stock
-        boolean reservado = inventoryClient.reserveStock(request.getLines());
-        if (!reservado) {
-            throw new RuntimeException("Stock insuficiente, pedido cancelado.");
-        }
-
-        try {
-            // 2. Intentar envío
-            ShipmentResponse envio = shipmentClient.createShipment(request.getAddress());
-
-            // 3. Guardar orden
-            return orderRepository.save(request.toOrder(envio.getTrackingCode()));
-
-        } catch (Exception e) {
-            // ERROR: El envío falló. REVERSIÓN (Rollback) manual:
-            inventoryClient.releaseStock(request.getLines());
-            throw new RuntimeException("Error en servicio de envíos. Stock liberado.");
-        }
-    }
-
-    private double calcularTotalConDescuento(List<OrderLine> lines, double totalOriginal) {
-        AdminConfig config = adminConfigRepo.findById("CONFIG").orElse(new AdminConfig());
-        int totalProductos = lines.stream().mapToInt(OrderLine::getQuantity).sum();
-
-        // Cálculo: ¿Cuántos bloques de 'cantidadPaso' hay?
-        int bloques = totalProductos / config.getCantidadPaso();
-        double descuentoFinal = bloques * config.getPorcentajeDescuento();
-
-        // Aplicar descuento
-        return totalOriginal * (1 - descuentoFinal);
-    }
-
-
-
 }

@@ -1,7 +1,6 @@
 package com.smartlogix.order.model;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import jakarta.persistence.*; // ✅ ESTA ES LA VERSIÓN CORRECTA
 
 @Entity
 public class AdminConfig {
